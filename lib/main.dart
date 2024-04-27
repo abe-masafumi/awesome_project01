@@ -1,10 +1,10 @@
+import 'package:awesome_project01/utils/native_sound.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
 // TODO:iOS、macOS、ウェブ端末でPush通知を受信する場合には、ユーザーに権限を付与する必要があります。
-
 
 // ③
 // IOS、Androidデバイス共通の処理、アプリがバックグラウンド時にメッセージを受け取る処理
@@ -22,6 +22,23 @@ void main() async {
   );
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   setupTokenRefreshListener();
+
+  // ④
+  // アプリがフォアグラウンド状態にある場合にメッセージを受け取る処理
+  //
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    print('Got a message whilst in the foreground!');
+    print('Message data: ${message.data}');
+    // ⑤
+    // 通知音を再生する
+    //
+    NativeSound.playDefaultNotificationSound();
+
+    if (message.notification != null) {
+      print('Message also contained a notification: ${message.notification}');
+    }
+  });
+
   runApp(const MyApp());
 }
 
@@ -67,11 +84,9 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-
   Future<void> setupInteractedMessage() async {
-
     RemoteMessage? initialMessage =
-    await FirebaseMessaging.instance.getInitialMessage();
+        await FirebaseMessaging.instance.getInitialMessage();
 
     if (initialMessage != null) {
       _handleMessage(initialMessage);
