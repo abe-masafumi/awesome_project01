@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -7,7 +8,23 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  setupTokenRefreshListener();
   runApp(const MyApp());
+}
+
+//
+// この処理は、アプリが初回起動した場合、または新しいFCMトークンが生成された場合に呼び出されます。
+// この処理を使用すると従来使用していた、final fcmToken = await FirebaseMessaging.instance.getToken();を使用せずに
+// 無駄なgetToken()の呼び出しを避けることができる。
+//
+void setupTokenRefreshListener() {
+  FirebaseMessaging.instance.onTokenRefresh.listen((fcmToken) {
+    print('新しいFCMトークン: $fcmToken');
+    //  eNM4Vs24TD6CNBMJvMTcYr:APA91bGOSduE-O4AMnbmgAVSF2-0En-Q4AD49rsQWXDUsc-ZuXQKl3yDONq-dl0GJeyCC8KLq5ipNQtoQYqC3ST_7AU0o4Z4uGve9S2vJuuBo88TwAoFTdbnrOSvM2wgeDGJf
+    // TODO: If necessary send token to application server.
+  }).onError((err) {
+    print('新しいFCMトークンの取得に失敗しました。');
+  });
 }
 
 class MyApp extends StatelessWidget {
