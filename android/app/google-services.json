@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "375939967651",
+    "project_id": "awsomeproject-flutter01",
+    "storage_bucket": "awsomeproject-flutter01.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:375939967651:android:fcf9112b364a6d88c5ad16",
+        "android_client_info": {
+          "package_name": "com.masa.awesome_project01"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3Zj1CqjJE89Vk32Jqt__qjzLLkW9jVoM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
