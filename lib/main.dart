@@ -3,11 +3,28 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
+// TODO:iOS、macOS、ウェブ端末でPush通知を受信する場合には、ユーザーに権限を付与する必要があります。
+
+
+//
+// IOS、Androidデバイス共通の処理、アプリがバックグラウンド時にメッセージを受け取る処理
+// Android端末の場合はこの処理がなくても通知を受け取ることができるが、細かな処理はできない。
+//
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // If you're going to use other Firebase services in the background, such as Firestore,
+  // make sure you call `initializeApp` before using other Firebase services.
+  // await Firebase.initializeApp();
+
+  print("Handling a background message: ${message.messageId}");
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   setupTokenRefreshListener();
   runApp(const MyApp());
 }
@@ -20,7 +37,7 @@ void main() async {
 void setupTokenRefreshListener() {
   FirebaseMessaging.instance.onTokenRefresh.listen((fcmToken) {
     print('新しいFCMトークン: $fcmToken');
-    //  eNM4Vs24TD6CNBMJvMTcYr:APA91bGOSduE-O4AMnbmgAVSF2-0En-Q4AD49rsQWXDUsc-ZuXQKl3yDONq-dl0GJeyCC8KLq5ipNQtoQYqC3ST_7AU0o4Z4uGve9S2vJuuBo88TwAoFTdbnrOSvM2wgeDGJf
+    //  c5H92-5bQiCjjtPdQngjHk:APA91bF9O160F69isR_1GrFL0AoxXEqm36ZdE26LJJnVnRoOPlE8myH9-acfok6IViiBxDY-QlfnKHCHh-xCLi0I9q8YXu0r6QRBjCiIIn7LQfGQeN6Qk2-68t2GEWa0OjKs4
     // TODO: If necessary send token to application server.
   }).onError((err) {
     print('新しいFCMトークンの取得に失敗しました。');
@@ -78,6 +95,46 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  // In this example, suppose that all messages contain a data field with the key 'type'.
+  Future<void> setupInteractedMessage() async {
+    // Get any messages which caused the application to open from
+    // a terminated state.
+    RemoteMessage? initialMessage =
+    await FirebaseMessaging.instance.getInitialMessage();
+
+    // If the message also contains a data property with a "type" of "chat",
+    // navigate to a chat screen
+    if (initialMessage != null) {
+      _handleMessage(initialMessage);
+    }
+
+    // Also handle any interaction when the app is in the background via a
+    // Stream listener
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleMessage);
+  }
+
+
+  //
+  // 通知をタップしてアプリが開かれた場合の処理を実行する
+  // 例えば特定の画面へ遷移する。。など
+  //
+  void _handleMessage(RemoteMessage message) {
+    print("_handleMessageが起動しました。");
+    // if (message.data['type'] == 'chat') {
+    //   Navigator.pushNamed(context, '/chat',
+    //     arguments: ChatArguments(message),
+    //   );
+    // }
+  }
+  @override
+  void initState() {
+    super.initState();
+
+    // Run code required to handle interacted messages in an async function
+    // as initState() must not be async
+    setupInteractedMessage();
+  }
+
   int _counter = 0;
 
   void _incrementCounter() {
