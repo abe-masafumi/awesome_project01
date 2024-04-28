@@ -1,4 +1,5 @@
 import 'package:awesome_project01/providers/notification_provider.dart';
+import 'package:awesome_project01/services/notification_preferences_manager.dart';
 import 'package:awesome_project01/utils/native_sound.dart';
 import 'package:badges/badges.dart' as badges;
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -8,7 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'firebase_options.dart';
 
 // TODO:iOS、macOS、ウェブ端末でPush通知を受信する場合には、ユーザーに権限を付与する必要があります。
-// TODO:アプリを閉じると reverpod が状態を保持しないため、ローカルストレージを使用した処理に変更する。
+// TODO:アプリがバックグラウンド時、終了時に通知を受け取った場合の処理を追加。
 // ③
 // IOS、Androidデバイス共通の処理、アプリがバックグラウンド時にメッセージを受け取る処理
 // Android端末の場合はこの処理がなくても通知を受け取ることができるが、細かな処理はできない。
@@ -23,6 +24,12 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  //
+  // デバイスにデータを保存するための設定
+  //
+  await NotificationPreferencesManager.init();
+  // await SharedPreferencesService.clearSharedPreferences(); // 開発用
   final container = ProviderContainer();
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   setupTokenRefreshListener();
@@ -30,11 +37,12 @@ void main() async {
   // ④
   // アプリがフォアグラウンド状態にある場合にメッセージを受け取る処理
   //
-  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
     print('Got a message whilst in the foreground!');
     print('Message data: ${message.data}');
-    container.read(notificationProvider.notifier).state = true;
-    container.read(notificationCounterProvider.notifier).state ++;
+    await NotificationPreferencesManager.setNewNotifications(container,true);
+    await NotificationPreferencesManager.setNotificationCountAdd(container);
+
     // ⑤
     // 通知音を再生する
     //
@@ -46,10 +54,10 @@ void main() async {
   });
 
   runApp(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MyApp(),
-      ),
+    UncontrolledProviderScope(
+      container: container,
+      child: const MyApp(),
+    ),
   );
 }
 
@@ -63,6 +71,9 @@ void setupTokenRefreshListener() {
     print('新しいFCMトークン: $fcmToken');
     //  c5H92-5bQiCjjtPdQngjHk:APA91bF9O160F69isR_1GrFL0AoxXEqm36ZdE26LJJnVnRoOPlE8myH9-acfok6IViiBxDY-QlfnKHCHh-xCLi0I9q8YXu0r6QRBjCiIIn7LQfGQeN6Qk2-68t2GEWa0OjKs4
     // TODO: If necessary send token to application server.
+    //
+    // TODO:　ReverpodでFCMトークンを管理し、適切な場面でサーバーへ送信する。
+    //
   }).onError((err) {
     print('新しいFCMトークンの取得に失敗しました。');
   });
@@ -70,6 +81,7 @@ void setupTokenRefreshListener() {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -85,6 +97,7 @@ class MyApp extends StatelessWidget {
 
 class MyHomePage extends ConsumerStatefulWidget {
   const MyHomePage({super.key, required this.title});
+
   final String title;
 
   @override
@@ -113,6 +126,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
     //   );
     // }
   }
+
   @override
   void initState() {
     super.initState();
@@ -126,10 +140,10 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
 
   int _counter = 0;
 
-  void _incrementCounter() {
-    ref.read(notificationCounterProvider.notifier).state --;
-    if (ref.watch(notificationCounterProvider) == 0) {
-      ref.read(notificationProvider.notifier).state = false;
+  void _incrementCounter() async {
+    await NotificationPreferencesManager.setNotificationCountDraw(ref);
+    if (NotificationPreferencesManager.getNotificationCount() == 0) {
+      await NotificationPreferencesManager.setNewNotifications(ref,false);
     }
     setState(() {
       _counter++;
@@ -145,25 +159,32 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
       ),
       body: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              const Text(
+                'You have pushed the button this many times:',
+              ),
+              Text(
+                '$_counter',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  NotificationPreferencesManager
+                      .logAllSharedPreferences(); // ボタンが押された時にログ出力
+                },
+                child: const Text('Log Shared Preferences'),
+              )
+            ]),
       ),
       //
       // バッチを表示
       //
       floatingActionButton: badges.Badge(
-        badgeContent: Text(ref.watch(notificationCounterProvider).toString(), style: TextStyle(fontSize: 20)),
+        badgeContent: Text(ref.watch(notificationCountProvider).toString(),
+            style: const TextStyle(fontSize: 20)),
         position: badges.BadgePosition.topEnd(top: -20, end: 40),
-        showBadge: ref.watch(notificationProvider),
+        showBadge: ref.watch(newNotificationsProvider) ?? false,
         ignorePointer: true,
         badgeStyle: const badges.BadgeStyle(
           borderSide: BorderSide(color: Colors.white, width: 1),
@@ -178,5 +199,3 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
     );
   }
 }
-
-//const Icon(Icons.check, color: Colors.white, size: 20),
