@@ -1,11 +1,14 @@
+import 'package:awesome_project01/providers/notification_provider.dart';
 import 'package:awesome_project01/utils/native_sound.dart';
+import 'package:badges/badges.dart' as badges;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'firebase_options.dart';
 
 // TODO:iOS、macOS、ウェブ端末でPush通知を受信する場合には、ユーザーに権限を付与する必要があります。
-
+// TODO:アプリを閉じると reverpod が状態を保持しないため、ローカルストレージを使用した処理に変更する。
 // ③
 // IOS、Androidデバイス共通の処理、アプリがバックグラウンド時にメッセージを受け取る処理
 // Android端末の場合はこの処理がなくても通知を受け取ることができるが、細かな処理はできない。
@@ -20,6 +23,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  final container = ProviderContainer();
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   setupTokenRefreshListener();
 
@@ -29,6 +33,8 @@ void main() async {
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     print('Got a message whilst in the foreground!');
     print('Message data: ${message.data}');
+    container.read(notificationProvider.notifier).state = true;
+    container.read(notificationCounterProvider.notifier).state ++;
     // ⑤
     // 通知音を再生する
     //
@@ -39,7 +45,12 @@ void main() async {
     }
   });
 
-  runApp(const MyApp());
+  runApp(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MyApp(),
+      ),
+  );
 }
 
 // ①
@@ -59,8 +70,6 @@ void setupTokenRefreshListener() {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -74,16 +83,17 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class MyHomePage extends StatefulWidget {
+class MyHomePage extends ConsumerStatefulWidget {
   const MyHomePage({super.key, required this.title});
-
   final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  ConsumerState<ConsumerStatefulWidget> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends ConsumerState<MyHomePage> {
+  bool isBadgeVisible = false;
+
   Future<void> setupInteractedMessage() async {
     RemoteMessage? initialMessage =
         await FirebaseMessaging.instance.getInitialMessage();
@@ -117,6 +127,10 @@ class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
 
   void _incrementCounter() {
+    ref.read(notificationCounterProvider.notifier).state --;
+    if (ref.watch(notificationCounterProvider) == 0) {
+      ref.read(notificationProvider.notifier).state = false;
+    }
     setState(() {
       _counter++;
     });
@@ -143,11 +157,26 @@ class _MyHomePageState extends State<MyHomePage> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+      //
+      // バッチを表示
+      //
+      floatingActionButton: badges.Badge(
+        badgeContent: Text(ref.watch(notificationCounterProvider).toString(), style: TextStyle(fontSize: 20)),
+        position: badges.BadgePosition.topEnd(top: -20, end: 40),
+        showBadge: ref.watch(notificationProvider),
+        ignorePointer: true,
+        badgeStyle: const badges.BadgeStyle(
+          borderSide: BorderSide(color: Colors.white, width: 1),
+          padding: EdgeInsets.all(9),
+        ),
+        child: FloatingActionButton(
+          onPressed: _incrementCounter,
+          tooltip: 'Increment',
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
 }
+
+//const Icon(Icons.check, color: Colors.white, size: 20),
