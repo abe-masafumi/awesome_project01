@@ -9,10 +9,16 @@ class NotificationPreferencesManager {
     _prefs = await SharedPreferences.getInstance();
   }
 
+  // バックグラウンド時に新規通知をセット
+  static Future<void> setNewNotificationsForBackground(bool value) async {
+    await _prefs?.setBool('hasNewNotifications', value) ?? Future.value();
+  }
+
   // 新規通知を取得
   static bool? getNewNotifications() {
     return _prefs?.getBool('hasNewNotifications');
   }
+
   // 新規通知をセット
   static Future<void> setNewNotifications(ref,bool value) async {
     await _prefs?.setBool('hasNewNotifications', value) ?? Future.value();
@@ -31,6 +37,13 @@ class NotificationPreferencesManager {
      await _prefs?.setInt('notificationCount', newValue) ?? Future.value();
     // セット時にreverpodの値も更新(画面の描画用)
      ref.read(notificationCountProvider.notifier).state = newValue;
+  }
+
+  // バックグラウンド時に通知数を足す
+  static Future<void> setNotificationCountAddForBackground() async {
+    final count = getNotificationCount() ?? 0;
+    final newValue = count + 1;
+    await _prefs?.setInt('notificationCount', newValue) ?? Future.value();
   }
 
   // 通知数を引く

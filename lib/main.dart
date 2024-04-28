@@ -5,7 +5,9 @@ import 'package:badges/badges.dart' as badges;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 
 // TODO:iOS、macOS、ウェブ端末でPush通知を受信する場合には、ユーザーに権限を付与する必要があります。
@@ -17,6 +19,12 @@ import 'firebase_options.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print("Handling a background message: ${message.messageId}");
+  await NotificationPreferencesManager.init();
+  await NotificationPreferencesManager.setNewNotificationsForBackground(true);
+  await NotificationPreferencesManager.setNotificationCountAddForBackground();
+  print('notificationCount: ${NotificationPreferencesManager.getNotificationCount()}');
+  print('hasNewNotifications: ${NotificationPreferencesManager.getNewNotifications()}');
+  print("完了: ${message.messageId}");
 }
 
 void main() async {
@@ -104,7 +112,7 @@ class MyHomePage extends ConsumerStatefulWidget {
   ConsumerState<ConsumerStatefulWidget> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends ConsumerState<MyHomePage> {
+class _MyHomePageState extends ConsumerState<MyHomePage> with WidgetsBindingObserver {
   bool isBadgeVisible = false;
 
   Future<void> setupInteractedMessage() async {
@@ -130,13 +138,38 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
   @override
   void initState() {
     super.initState();
-
+    WidgetsBinding.instance.addObserver(this);
     // ②
     // 通知をタップしてアプリが開かれた場合の処理を実行する
     // 例えば特定の画面へ遷移する。。など
     //
     setupInteractedMessage();
   }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // アプリがフォアグラウンドに戻った時にデータを再読み込み
+      loadData();
+    }
+  }
+
+  void loadData() async {
+    SharedPreferences prefs= await SharedPreferences.getInstance();
+    // バックグラウンド ハンドラーが別の分離環境で実行されるため、強制的に更新
+    await prefs.reload();
+    NotificationPreferencesManager.logAllSharedPreferences();
+    ref.invalidate(newNotificationsProvider);
+    ref.invalidate(notificationCountProvider);
+  }
+
 
   int _counter = 0;
 
@@ -169,9 +202,12 @@ class _MyHomePageState extends ConsumerState<MyHomePage> {
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               ElevatedButton(
-                onPressed: () {
-                  NotificationPreferencesManager
-                      .logAllSharedPreferences(); // ボタンが押された時にログ出力
+                onPressed: () async {
+                  final String? fcmToken = await FirebaseMessaging.instance.getToken();
+                  if (fcmToken != null) {
+                    Clipboard.setData(ClipboardData(text: fcmToken));
+                  }
+                  NotificationPreferencesManager.logAllSharedPreferences(); // ボタンが押された時にログ出力
                 },
                 child: const Text('Log Shared Preferences'),
               )
