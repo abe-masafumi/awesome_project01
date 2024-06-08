@@ -10,8 +10,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 
-// TODO:iOS、macOS、ウェブ端末でPush通知を受信する場合には、ユーザーに権限を付与する必要があります。
-// TODO:アプリがバックグラウンド時、終了時に通知を受け取った場合の処理を追加。
+// TODO: iOS、macOS、ウェブ端末でPush通知を受信する場合には、ユーザーに権限を付与する必要があります。
+// TODO: デフォルト通知音の設定について詳しく調べる
 // ③
 // IOS、Androidデバイス共通の処理、アプリがバックグラウンド時にメッセージを受け取る処理
 // Android端末の場合はこの処理がなくても通知を受け取ることができるが、細かな処理はできない。
