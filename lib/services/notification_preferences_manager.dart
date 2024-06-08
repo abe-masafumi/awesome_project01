@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:permission_handler/permission_handler.dart';
+import '../components/notification-description-sheet.dart';
 import '../providers/notification_provider.dart';
 
 class NotificationPreferencesManager {
@@ -75,5 +76,28 @@ class NotificationPreferencesManager {
         print('$key: $value');
       }
     }
+  }
+}
+
+Future<void> checkNotificationPermission(context) async {
+  var status = await Permission.notification.status;
+
+  if (status.isDenied) {
+    if (await Permission.notification.shouldShowRequestRationale) {
+      showExplanationDialog(context);
+    } else {
+      requestPermission();
+    }
+  } else if (status.isGranted) {
+    // sendNotification();
+    print('ssss01');
+  }
+}
+
+Future<void> requestPermission() async {
+  var status = await Permission.notification.request();
+  if (status.isGranted) {
+    // sendNotification();
+    print('ssss02');
   }
 }
