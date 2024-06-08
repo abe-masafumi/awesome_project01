@@ -9,6 +9,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
+import 'package:permission_handler/permission_handler.dart';
+
 
 // TODO: iOS、macOS、ウェブ端末でPush通知を受信する場合には、ユーザーに権限を付与する必要があります。
 // TODO: デフォルト通知音の設定について詳しく調べる
@@ -183,6 +185,89 @@ class _MyHomePageState extends ConsumerState<MyHomePage> with WidgetsBindingObse
     });
   }
 
+  // TODO: 通知の許可を求める処理-サービスクラスに移動する
+  Future<void> _checkNotificationPermission() async {
+    var status = await Permission.notification.status;
+
+    if (status.isDenied) {
+      if (await Permission.notification.shouldShowRequestRationale) {
+        _showExplanationDialog();
+      } else {
+        _requestPermission();
+      }
+    } else if (status.isGranted) {
+      // _sendNotification();
+      print('ssss01');
+    }
+  }
+
+  // TODO: 通知の許可を求める処理-サービスクラスに移動する
+  Future<void> _requestPermission() async {
+    var status = await Permission.notification.request();
+    if (status.isGranted) {
+      // _sendNotification();
+      print('ssss02');
+    }
+  }
+
+  // TODO: 通知の説明ダイアログを表示- コンポーネント化する
+  void _showExplanationDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.95,
+          color: Colors.white,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 24),
+              const Text(
+                'Get notified!',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Stay on top of your trip when better offers or personalized suggestions are found',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 400),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16.0),
+                    child: TextButton(
+                      onPressed: () {
+                        // Handle "Skip" button press
+                      },
+                      child: Text('Skip'),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16.0),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _requestPermission();
+                        // Handle "I'm in" button press
+                      },
+                      child: Text("I'm in"),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -210,7 +295,11 @@ class _MyHomePageState extends ConsumerState<MyHomePage> with WidgetsBindingObse
                   NotificationPreferencesManager.logAllSharedPreferences(); // ボタンが押された時にログ出力
                 },
                 child: const Text('Log Shared Preferences'),
-              )
+              ),
+              ElevatedButton(
+                onPressed: _checkNotificationPermission,
+                child: Text('Request Notification Permission'),
+              ),
             ]),
       ),
       //
