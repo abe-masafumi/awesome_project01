@@ -77,27 +77,30 @@ class NotificationPreferencesManager {
       }
     }
   }
-}
 
-Future<void> checkNotificationPermission(context) async {
-  var status = await Permission.notification.status;
+  // 通知許可の確認
+  static Future<void> checkNotificationPermission(context) async {
+    var status = await Permission.notification.status;
 
-  if (status.isDenied) {
-    if (await Permission.notification.shouldShowRequestRationale) {
-      showExplanationDialog(context);
-    } else {
-      requestPermission();
+    if (status.isDenied) {
+      if (await Permission.notification.shouldShowRequestRationale) {
+        showExplanationDialog(context);
+      } else {
+        requestPermission();
+      }
+    } else if (status.isGranted) {
+      // sendNotification();
+      print('ssss01');
     }
-  } else if (status.isGranted) {
-    // sendNotification();
-    print('ssss01');
   }
-}
 
-Future<void> requestPermission() async {
-  var status = await Permission.notification.request();
-  if (status.isGranted) {
-    // sendNotification();
-    print('ssss02');
+  // 通知許可のリクエスト
+  static Future<void> requestPermission() async {
+    var status = await Permission.notification.request();
+    if (status.isGranted) {
+      // sendNotification();
+      print('ssss02');
+    }
   }
+
 }

@@ -208,13 +208,13 @@ class _MyHomePageState extends ConsumerState<MyHomePage> with WidgetsBindingObse
                   if (fcmToken != null) {
                     Clipboard.setData(ClipboardData(text: fcmToken));
                   }
-                  NotificationPreferencesManager.logAllSharedPreferences(); // ボタンが押された時にログ出力
+                  NotificationPreferencesManager.logAllSharedPreferences();
                 },
                 child: const Text('Log Shared Preferences'),
               ),
               ElevatedButton(
                 onPressed: () {
-                  checkNotificationPermission(context);
+                  NotificationPreferencesManager.checkNotificationPermission(context);
                 },
                 child: Text('Request Notification Permission'),
               ),

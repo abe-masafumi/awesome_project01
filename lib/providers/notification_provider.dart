@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../services/notification_preferences_manager.dart';
 
 // 状態更新用のProvider
