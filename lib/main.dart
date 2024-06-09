@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 
+
 // TODO: iOS、macOS、ウェブ端末でPush通知を受信する場合には、ユーザーに権限を付与する必要があります。
 // TODO: デフォルト通知音の設定について詳しく調べる
 // ③
@@ -207,10 +208,16 @@ class _MyHomePageState extends ConsumerState<MyHomePage> with WidgetsBindingObse
                   if (fcmToken != null) {
                     Clipboard.setData(ClipboardData(text: fcmToken));
                   }
-                  NotificationPreferencesManager.logAllSharedPreferences(); // ボタンが押された時にログ出力
+                  NotificationPreferencesManager.logAllSharedPreferences();
                 },
                 child: const Text('Log Shared Preferences'),
-              )
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  NotificationPreferencesManager.checkNotificationPermission(context);
+                },
+                child: Text('Request Notification Permission'),
+              ),
             ]),
       ),
       //

@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:permission_handler/permission_handler.dart';
+import '../components/notification-description-sheet.dart';
 import '../providers/notification_provider.dart';
 
 class NotificationPreferencesManager {
@@ -76,4 +77,31 @@ class NotificationPreferencesManager {
       }
     }
   }
+
+  // 通知許可の確認
+  static Future<void> checkNotificationPermission(context) async {
+    var status = await Permission.notification.status;
+
+    // 通知許可が拒否されている場合
+    if (status.isDenied) {
+      // ユーザーが以前に通知を拒否した場合、説明ダイアログを表示
+      if (await Permission.notification.shouldShowRequestRationale) {
+        showExplanationDialog(context);
+      } else {
+        requestPermission();
+      }
+    // 通知許可が許可されている場合
+    } else if (status.isGranted) {
+      print('通知は許可されています。');
+    }
+  }
+
+  // 通知許可のリクエスト
+  static Future<void> requestPermission() async {
+    var status = await Permission.notification.request();
+    if (status.isGranted) {
+      print('通知を許可しました。');
+    }
+  }
+
 }
