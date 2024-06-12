@@ -1,3 +1,5 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../components/notification-description-sheet.dart';
@@ -79,23 +81,63 @@ class NotificationPreferencesManager {
   }
 
   // 通知許可の確認
-  static Future<void> checkNotificationPermission(context) async {
-    var status = await Permission.notification.status;
+  static Future<void> checkNotificationPermission(BuildContext context) async {
+    if (Theme.of(context).platform == TargetPlatform.iOS) {
+      await _checkAndRequestIOSPermission(context);
+    } else {
+      var status = await Permission.notification.status;
 
-    // 通知許可が拒否されている場合
-    if (status.isDenied) {
-      // ユーザーが以前に通知を拒否した場合、説明ダイアログを表示
-      if (await Permission.notification.shouldShowRequestRationale) {
-        showExplanationDialog(context);
-      } else {
-        requestPermission();
+      // 通知許可が拒否されている場合
+      if (status.isDenied) {
+        // ユーザーが以前に通知を拒否した場合、説明ダイアログを表示
+        if (await Permission.notification.shouldShowRequestRationale) {
+          if (context.mounted) showExplanationDialog(context);
+        } else {
+          requestPermission();
+        }
       }
-    // 通知許可が許可されている場合
-    } else if (status.isGranted) {
-      print('通知は許可されています。');
+      // 通知許可が許可されている場合
+      else if (status.isGranted) {
+        print('通知は許可されています。');
+      }
     }
   }
 
+  static Future<void> _checkAndRequestIOSPermission(BuildContext context) async {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    NotificationSettings settings = await messaging.getNotificationSettings();
+
+    if (settings.authorizationStatus != AuthorizationStatus.authorized) {
+      settings = await messaging.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
+    }
+
+    if (settings.authorizationStatus != AuthorizationStatus.authorized && context.mounted) {
+      showExplanationDialog(context);
+    }
+
+    switch (settings.authorizationStatus) {
+      case AuthorizationStatus.authorized:
+        print('通知権限が許可されました。');
+        break;
+      case AuthorizationStatus.denied:
+        print('通知権限が拒否されました。');
+        break;
+      case AuthorizationStatus.provisional:
+        print('通知権限が暫定的に許可されました。');
+        break;
+      case AuthorizationStatus.notDetermined:
+        print('通知権限がまだ決定されていません。');
+        break;
+    }
+  }
   // 通知許可のリクエスト
   static Future<void> requestPermission() async {
     var status = await Permission.notification.request();
