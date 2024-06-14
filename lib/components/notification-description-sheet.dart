@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../services/notification_preferences_manager.dart';
 
 void showExplanationDialog(BuildContext context) {
@@ -51,9 +52,13 @@ void showExplanationDialog(BuildContext context) {
                   padding: const EdgeInsets.only(right: 16.0),
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.of(context).pop();
                       // Handle "I'm in" button press
-                      NotificationPreferencesManager.requestPermission();
+                      Navigator.of(context).pop();
+                      if (Theme.of(context).platform == TargetPlatform.iOS) {
+                        openAppSettings();
+                      } else {
+                        NotificationPreferencesManager.requestPermission();
+                      }
                     },
                     child: Text("I'm in"),
                   ),
