@@ -11,8 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 
 
-// TODO: iOS、macOS、ウェブ端末でPush通知を受信する場合には、ユーザーに権限を付与する必要があります。
-// TODO: デフォルト通知音の設定について詳しく調べる
+// iOS、macOS、ウェブ端末でPush通知を受信する場合には、ユーザーに権限を付与する必要があります。
 // ③
 // IOS、Androidデバイス共通の処理、アプリがバックグラウンド時にメッセージを受け取る処理
 // Android端末の場合はこの処理がなくても通知を受け取ることができるが、細かな処理はできない。
@@ -20,6 +19,7 @@ import 'firebase_options.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print("Handling a background message: ${message.messageId}");
+  await Firebase.initializeApp();
   await NotificationPreferencesManager.init();
   await NotificationPreferencesManager.setNewNotificationsForBackground(true);
   await NotificationPreferencesManager.setNotificationCountAddForBackground();
@@ -128,7 +128,7 @@ class _MyHomePageState extends ConsumerState<MyHomePage> with WidgetsBindingObse
   }
 
   void _handleMessage(RemoteMessage message) {
-    print("_handleMessageが起動しました。");
+    print("通知がタップされました。");
     // if (message.data['type'] == 'chat') {
     //   Navigator.pushNamed(context, '/chat',
     //     arguments: ChatArguments(message),
