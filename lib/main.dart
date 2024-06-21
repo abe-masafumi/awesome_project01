@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:awesome_project01/providers/notification_provider.dart';
 import 'package:awesome_project01/services/notification_preferences_manager.dart';
 import 'package:awesome_project01/utils/native_sound.dart';
@@ -51,11 +53,16 @@ void main() async {
     print('Message data: ${message.data}');
     await NotificationPreferencesManager.setNewNotifications(container,true);
     await NotificationPreferencesManager.setNotificationCountAdd(container);
+    const MethodChannel channel = MethodChannel('com.yourcompany.notifications');
 
     // ⑤
-    // 通知音を再生する
+    // IOSとAndroidの場合で通知音を再生する処理を分ける
     //
-    NativeSound.playDefaultNotificationSound();
+    if (Platform.isIOS) {
+      await channel.invokeMethod('triggerNotification');
+    } else {
+      NativeSound.playDefaultNotificationSound();
+    }
 
     if (message.notification != null) {
       print('Message also contained a notification: ${message.notification}');
@@ -78,11 +85,7 @@ void main() async {
 void setupTokenRefreshListener() {
   FirebaseMessaging.instance.onTokenRefresh.listen((fcmToken) {
     print('新しいFCMトークン: $fcmToken');
-    //  c5H92-5bQiCjjtPdQngjHk:APA91bF9O160F69isR_1GrFL0AoxXEqm36ZdE26LJJnVnRoOPlE8myH9-acfok6IViiBxDY-QlfnKHCHh-xCLi0I9q8YXu0r6QRBjCiIIn7LQfGQeN6Qk2-68t2GEWa0OjKs4
-    // TODO: If necessary send token to application server.
-    //
     // TODO:　ReverpodでFCMトークンを管理し、適切な場面でサーバーへ送信する。
-    //
   }).onError((err) {
     print('新しいFCMトークンの取得に失敗しました。');
   });
