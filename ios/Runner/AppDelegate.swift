@@ -2,7 +2,7 @@ import UIKit
 import Flutter
 import FirebaseCore
 import UserNotifications
-
+// TODO: IOSローカル通知を受け取った際にFirebaseMessaging.onMessage.listenが無効になる
 @UIApplicationMain
 @objc class AppDelegate: FlutterAppDelegate {
   override func application(
@@ -12,55 +12,24 @@ import UserNotifications
     FirebaseApp.configure()
     GeneratedPluginRegistrant.register(with: self)
 
-    let center = UNUserNotificationCenter.current()
-    center.delegate = self
-
-    center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-        if let error = error {
-            print("通知の権限リクエストでエラーが発生しました: \(error)")
-        }
+    // 通知の許可をリクエスト
+    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { (granted, error) in
+      if granted {
+        UNUserNotificationCenter.current().delegate = self
+      }
     }
-
-    // MethodChannelの設定
-    let controller: FlutterViewController = window?.rootViewController as! FlutterViewController
-    let channel = FlutterMethodChannel(name: "com.yourcompany.notifications",
-                                       binaryMessenger: controller.binaryMessenger)
-
-    channel.setMethodCallHandler { [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) in
-        if call.method == "triggerNotification" {
-            self?.triggerNotification()
-            result(nil)
-        } else {
-            result(FlutterMethodNotImplemented)
-        }
-    }
+    application.registerForRemoteNotifications()
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
-  // フォアグラウンドで通知を受け取った時に呼ばれるデリゲートメソッド
-  override func userNotificationCenter(
-    _ center: UNUserNotificationCenter,
-    willPresent notification: UNNotification,
-    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
-  ) {
-    // 通知バナー表示、通知音の再生を指定
-    completionHandler([.alert, .sound])
-  }
-
-  // 通知をトリガーするメソッド
-  @objc func triggerNotification() {
-    let content = UNMutableNotificationContent()
-    content.title = "新しいメッセージがあります"
-    content.body = "あなたに新しいメッセージが届きました"
-    content.sound = UNNotificationSound.default
-
-    let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
-
-    UNUserNotificationCenter.current().add(request) { error in
-        if let error = error {
-            print("通知のトリガーに失敗しました: \(error)")
-        }
+    // 通知を受け取ったときの処理
+    override func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+      completionHandler([.alert, .sound, .badge])
     }
-  }
+
+    // 通知をタップしたときの処理
+    override func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+      completionHandler()
+    }
 }

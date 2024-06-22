@@ -59,7 +59,8 @@ void main() async {
     // IOSとAndroidの場合で通知音を再生する処理を分ける
     //
     if (Platform.isIOS) {
-      await channel.invokeMethod('triggerNotification');
+      // TODO: IOSローカル通知を受け取った際にFirebaseMessaging.onMessage.listenが無効になる
+      // await channel.invokeMethod('triggerNotification');
     } else {
       NativeSound.playDefaultNotificationSound();
     }
