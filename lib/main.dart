@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:awesome_project01/providers/notification_provider.dart';
 import 'package:awesome_project01/services/notification_preferences_manager.dart';
 import 'package:awesome_project01/utils/native_sound.dart';
@@ -19,12 +21,12 @@ import 'firebase_options.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print("Handling a background message: ${message.messageId}");
+  print("(IOS)バックグラウンド時に通知が届きました。: ${message.messageId}");
   await NotificationPreferencesManager.init();
   await NotificationPreferencesManager.setNewNotificationsForBackground(true);
   await NotificationPreferencesManager.setNotificationCountAddForBackground();
-  print('notificationCount: ${NotificationPreferencesManager.getNotificationCount()}');
-  print('hasNewNotifications: ${NotificationPreferencesManager.getNewNotifications()}');
+  // print('notificationCount: ${NotificationPreferencesManager.getNotificationCount()}');
+  // print('hasNewNotifications: ${NotificationPreferencesManager.getNewNotifications()}');
   print("完了: ${message.messageId}");
 }
 
@@ -39,33 +41,12 @@ void main() async {
   //
   await NotificationPreferencesManager.init();
   // await SharedPreferencesService.clearSharedPreferences(); // 開発用
-  final container = ProviderContainer();
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   setupTokenRefreshListener();
 
-  // ④
-  // アプリがフォアグラウンド状態にある場合にメッセージを受け取る処理
-  //
-  FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-    print('Got a message whilst in the foreground!');
-    print('Message data: ${message.data}');
-    await NotificationPreferencesManager.setNewNotifications(container,true);
-    await NotificationPreferencesManager.setNotificationCountAdd(container);
-
-    // ⑤
-    // 通知音を再生する
-    //
-    NativeSound.playDefaultNotificationSound();
-
-    if (message.notification != null) {
-      print('Message also contained a notification: ${message.notification}');
-    }
-  });
-
   runApp(
-    UncontrolledProviderScope(
-      container: container,
-      child: const MyApp(),
+    const ProviderScope(
+      child: MyApp(),
     ),
   );
 }
@@ -78,11 +59,7 @@ void main() async {
 void setupTokenRefreshListener() {
   FirebaseMessaging.instance.onTokenRefresh.listen((fcmToken) {
     print('新しいFCMトークン: $fcmToken');
-    //  c5H92-5bQiCjjtPdQngjHk:APA91bF9O160F69isR_1GrFL0AoxXEqm36ZdE26LJJnVnRoOPlE8myH9-acfok6IViiBxDY-QlfnKHCHh-xCLi0I9q8YXu0r6QRBjCiIIn7LQfGQeN6Qk2-68t2GEWa0OjKs4
-    // TODO: If necessary send token to application server.
-    //
     // TODO:　ReverpodでFCMトークンを管理し、適切な場面でサーバーへ送信する。
-    //
   }).onError((err) {
     print('新しいFCMトークンの取得に失敗しました。');
   });
@@ -115,6 +92,7 @@ class MyHomePage extends ConsumerStatefulWidget {
 
 class _MyHomePageState extends ConsumerState<MyHomePage> with WidgetsBindingObserver {
   bool isBadgeVisible = false;
+  static const platform = MethodChannel('com.example.app/notifications');
 
   Future<void> setupInteractedMessage() async {
     RemoteMessage? initialMessage =
@@ -125,8 +103,53 @@ class _MyHomePageState extends ConsumerState<MyHomePage> with WidgetsBindingObse
     }
 
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessage);
+
+    // ④
+    // アプリがフォアグラウンド状態にある場合にメッセージを受け取る処理
+    //
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+      print('(ANDROID)アプリがフォアグラウンド時に通知が届きました。');
+      // print('Message data: ${message.data}');
+      await NotificationPreferencesManager.setNewNotifications(ref,true);
+      await NotificationPreferencesManager.setNotificationCountAdd(ref);
+
+      // ⑤
+      // IOSとAndroidの場合で通知音を再生する処理を分ける
+      //
+      NativeSound.playDefaultNotificationSound();
+
+      if (message.notification != null) {
+        print('Message also contained a notification: ${message.notification}');
+      }
+    });
+
+    //
+    // IOS端末がフォアグラウンド時に通知を受け取った際の処理
+    //
+    platform.setMethodCallHandler((MethodCall call) async {
+      switch (call.method) {
+        case 'onMessage':
+          await NotificationPreferencesManager.setNewNotifications(ref, true);
+          await NotificationPreferencesManager.setNotificationCountAdd(ref);
+          final title = call.arguments['title'];
+          final body = call.arguments['body'];
+          print('Got a message from iOS: title: $title, body: $body');
+          print('(IOS)アプリがフォアグラウンド時に通知が届きました。');
+          break;
+        case 'onNotificationTap':
+          final title = call.arguments['title'];
+          final body = call.arguments['body'];
+          print('Notification tapped: title: $title, body: $body');
+          print('(IOS)通知がタップされました。');
+          // タップされた通知の処理を追加
+          break;
+        default:
+          print('Unknown method: ${call.method}');
+      }
+    });
   }
 
+  // これはandroidで動作します。
   void _handleMessage(RemoteMessage message) {
     print("通知がタップされました。");
     // if (message.data['type'] == 'chat') {
